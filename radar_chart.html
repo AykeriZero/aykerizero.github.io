@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radar Chart Creator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+        }
+        .controls {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        .metric {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #e0e0e0;
+        }
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .remove-btn {
+            padding: 5px 10px;
+            background: #ff4757;
+            font-size: 14px;
+            width: auto;
+            margin: 0;
+        }
+        .remove-btn:hover {
+            background: #ff3838;
+        }
+        #chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 500px;
+        }
+        canvas {
+            max-width: 100%;
+            height: auto;
+        }
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Radar Chart Creator</h1>
+        <div class="content">
+            <div class="controls">
+                <div class="input-group">
+                    <label>Chart Title</label>
+                    <input type="text" id="chartTitle" value="Skills Assessment" placeholder="Enter chart title">
+                </div>
+                
+                <div id="metrics">
+                    <h3 style="margin-bottom: 15px;">Metrics</h3>
+                </div>
+                
+                <button onclick="addMetric()">+ Add Metric</button>
+                <button onclick="drawChart()" style="background: #2ecc71;">Generate Chart</button>
+            </div>
+            
+            <div id="chart-container">
+                <canvas id="radarChart" width="500" height="500"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const metrics = [
+            { name: 'Speed', value: 8 },
+            { name: 'Strength', value: 6 },
+            { name: 'Intelligence', value: 9 },
+            { name: 'Agility', value: 7 },
+            { name: 'Endurance', value: 5 }
+        ];
+
+        function renderMetrics() {
+            const container = document.getElementById('metrics');
+            const h3 = container.querySelector('h3');
+            container.innerHTML = '';
+            container.appendChild(h3);
+            
+            metrics.forEach((metric, i) => {
+                const div = document.createElement('div');
+                div.className = 'metric';
+                div.innerHTML = `
+                    <div class="metric-header">
+                        <label>Metric ${i + 1}</label>
+                        <button class="remove-btn" onclick="removeMetric(${i})">Remove</button>
+                    </div>
+                    <input type="text" placeholder="Name" value="${metric.name}" 
+                           onchange="metrics[${i}].name = this.value">
+                    <input type="number" min="0" max="10" placeholder="Value (0-10)" 
+                           value="${metric.value}" onchange="metrics[${i}].value = +this.value">
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function addMetric() {
+            metrics.push({ name: 'New Metric', value: 5 });
+            renderMetrics();
+        }
+
+        function removeMetric(index) {
+            metrics.splice(index, 1);
+            renderMetrics();
+        }
+
+        function drawChart() {
+            const canvas = document.getElementById('radarChart');
+            const ctx = canvas.getContext('2d');
+            const title = document.getElementById('chartTitle').value;
+            
+            const width = canvas.width;
+            const height = canvas.height;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const radius = Math.min(width, height) / 2 - 80;
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            // Draw title
+            ctx.font = 'bold 24px Arial';
+            ctx.fillStyle = '#333';
+            ctx.textAlign = 'center';
+            ctx.fillText(title, centerX, 40);
+            
+            const n = metrics.length;
+            const angleStep = (Math.PI * 2) / n;
+            
+            // Draw grid circles
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            for (let i = 1; i <= 5; i++) {
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, (radius / 5) * i, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            
+            // Draw axes and labels
+            ctx.strokeStyle = '#ddd';
+            ctx.fillStyle = '#555';
+            ctx.font = '14px Arial';
+            
+            for (let i = 0; i < n; i++) {
+                const angle = angleStep * i - Math.PI / 2;
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+                
+                // Draw axis line
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(x, y);
+                ctx.stroke();
+                
+                // Draw label
+                const labelX = centerX + Math.cos(angle) * (radius + 30);
+                const labelY = centerY + Math.sin(angle) * (radius + 30);
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(metrics[i].name, labelX, labelY);
+            }
+            
+            // Draw data polygon
+            ctx.beginPath();
+            for (let i = 0; i < n; i++) {
+                const angle = angleStep * i - Math.PI / 2;
+                const value = Math.max(0, Math.min(10, metrics[i].value));
+                const r = (value / 10) * radius;
+                const x = centerX + Math.cos(angle) * r;
+                const y = centerY + Math.sin(angle) * r;
+                
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(102, 126, 234, 0.3)';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(102, 126, 234, 1)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Draw data points
+            ctx.fillStyle = '#667eea';
+            for (let i = 0; i < n; i++) {
+                const angle = angleStep * i - Math.PI / 2;
+                const value = Math.max(0, Math.min(10, metrics[i].value));
+                const r = (value / 10) * radius;
+                const x = centerX + Math.cos(angle) * r;
+                const y = centerY + Math.sin(angle) * r;
+                
+                ctx.beginPath();
+                ctx.arc(x, y, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        renderMetrics();
+        drawChart();
+    </script>
+</body>
+</html>
